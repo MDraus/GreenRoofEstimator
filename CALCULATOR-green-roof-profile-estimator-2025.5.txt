@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Roof Cost & Performance Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-active { border-bottom-color: #3b82f6; color: #3b82f6; }
+        .tab-disabled { color: #9ca3af; cursor: not-allowed; }
+        .view { display: none; }
+        .view-active { display: block; }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        /* Style for number inputs to hide spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .accordion-content.open {
+            max-height: 1500px; /* Increased for more fields */
+            transition: max-height 0.5s ease-in, padding 0.5s ease-in;
+            padding-top: 1.5rem; /* Corresponds to p-6 */
+            padding-bottom: 1.5rem;
+        }
+         @media print {
+            body, html {
+                background-color: white;
+                font-size: 10pt;
+            }
+            .no-print {
+                display: none !important;
+            }
+            #app-container {
+                max-width: 100%;
+                padding: 0.75in;
+            }
+             #estimate-summary-container .p-6 {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 1rem 0 !important;
+            }
+             #estimate-summary-container .border {
+                border: 1px solid #e2e8f0 !important;
+            }
+            #estimate-summary-container h3 {
+                font-size: 1.25rem;
+            }
+            #estimate-summary-container table {
+                font-size: 9pt;
+            }
+            .print-footer {
+                position: fixed;
+                bottom: 0.5in;
+                left: 0.75in;
+                right: 0.75in;
+                text-align: center;
+                font-size: 8pt;
+                color: #64748b;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="app-container" class="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        
+        <header class="mb-6 no-print">
+            <h1 class="text-3xl font-bold text-slate-900">Green Roof Cost & Performance Calculator</h1>
+            <div class="mt-2">
+                <label for="projectName" class="block text-sm font-medium text-slate-700">Project Name</label>
+                <input type="text" id="projectName" class="mt-1 block w-full md:w-96 rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="Enter Project Name">
+            </div>
+        </header>
+
+        <nav class="border-b border-slate-200 mb-6 no-print">
+            <ul class="flex items-center -mb-px flex-wrap">
+                <li><a href="#" class="tab-link text-sm md:text-base font-medium p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300" data-view="calculator">Calculator</a></li>
+                <li><a href="#" id="unit-pricing-tab" class="tab-link text-sm md:text-base font-medium p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300" data-view="unit-pricing">Unit Pricing</a></li>
+                <li><a href="#" id="estimating-tab" class="tab-link text-sm md:text-base font-medium p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300 tab-disabled" data-view="estimating">Estimate</a></li>
+                 <li><a href="#" class="tab-link text-sm md:text-base font-medium p-4 border-b-2 border-transparent hover:text-blue-600 hover:border-blue-300" data-view="change-history">Change History</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Calculator View -->
+            <div id="calculator-view" class="view">
+                <div id="profiles-container" class="space-y-4"></div>
+
+                <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                     <button id="addProfileBtn" class="w-full sm:w-auto flex-grow sm:flex-grow-0 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all">
+                        Add Another Profile
+                    </button>
+                    <button id="calculateBtn" class="w-full sm:w-auto flex-grow bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all">
+                        Calculate All Profile Costs
+                    </button>
+                    <button id="exportBtn" class="w-full sm:w-auto flex-grow sm:flex-grow-0 bg-slate-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 transition-all" disabled>
+                        Export Results to CSV
+                    </button>
+                </div>
+
+                <div id="results-container" class="mt-8"></div>
+            </div>
+
+            <!-- Estimating View -->
+            <div id="estimating-view" class="view">
+                 <div class="flex justify-between items-center mb-4 no-print">
+                    <h2 id="estimate-title" class="text-2xl font-bold text-slate-900">Estimate Summary</h2>
+                    <button onclick="window.print()" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Print Estimate</button>
+                </div>
+                <div id="estimate-summary-container" class="space-y-8">
+                    <!-- Estimate summaries will be injected here -->
+                </div>
+            </div>
+
+            <!-- Unit Pricing View -->
+            <div id="unit-pricing-view" class="view">
+                <div class="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-slate-200">
+                    <div class="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-8">
+                        <h2 class="text-xl font-semibold mb-4 text-slate-900">Default Calculation Variables</h2>
+                        <p class="text-sm text-slate-600 mb-4">Set the default values for calculations. Changes must be saved to take effect.</p>
+                        <div id="default-globals-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- Default global inputs for unit pricing page are inserted here by JS -->
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-xl font-semibold mb-4 text-slate-900">Component Cost & Performance Database</h2>
+                    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                        <button id="saveDataBtn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700">Save Changes</button>
+                        <button id="addNewItemBtn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add New Item</button>
+                        <button id="revertDataBtn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700">Revert to Defaults</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="data-table" class="w-full text-xs text-left">
+                            <thead class="bg-slate-100 text-slate-600 uppercase">
+                                <tr>
+                                    <th class="p-2">Category</th>
+                                    <th class="p-2">Item Name</th>
+                                    <th class="p-2">Material Cost</th>
+                                    <th class="p-2">Hoisting SF/Pallet</th>
+                                    <th class="p-2">Install SF/MH</th>
+                                    <th class="p-2">Depth (in)</th>
+                                    <th class="p-2">Dry Wt (psf)</th>
+                                    <th class="p-2">Sat. Wt (psf)</th>
+                                    <th class="p-2">Storage Type</th>
+                                    <th class="p-2">Storage Ratio (%)</th>
+                                    <th class="p-2">QB ID</th>
+                                    <th class="p-2">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body" class="bg-white divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change History View -->
+            <div id="change-history-view" class="view">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-slate-900">Change History</h2>
+                        <button id="clearHistoryBtn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700">Clear History</button>
+                    </div>
+                    <div id="history-log-container" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-xs text-slate-500 mt-8 text-center no-print">
+            This information is provided for budgetary purposes only, and is based on standard commercial construction rates and the cost & production assumptions noted.
+        </footer>
+        
+        <!-- Modal for alerts and confirmations -->
+        <div id="modal-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+        <div id="modal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm z-50 hidden">
+            <h3 id="modal-title" class="text-lg font-bold text-slate-900 mb-4"></h3>
+            <p id="modal-message" class="text-slate-600 mb-6"></p>
+            <div id="modal-actions" class="flex justify-end gap-3">
+                <button id="modal-cancel" class="bg-slate-200 text-slate-800 font-semibold py-2 px-4 rounded-lg hover:bg-slate-300">Cancel</button>
+                <button id="modal-confirm" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">OK</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Polyfill for Array.from()
+        if (!Array.from) {
+            Array.from = (function () {
+                var toStr = Object.prototype.toString;
+                var isCallable = function (fn) {
+                    return typeof fn === 'function' || toStr.call(fn) === '[object Function]';
+                };
+                var toInteger = function (value) {
+                    var number = Number(value);
+                    if (isNaN(number)) { return 0; }
+                    if (number === 0 || !isFinite(number)) { return number; }
+                    return (number > 0 ? 1 : -1) * Math.floor(Math.abs(number));
+                };
+                var maxSafeInteger = Math.pow(2, 53) - 1;
+                var toLength = function (value) {
+                    var len = toInteger(value);
+                    return Math.min(Math.max(len, 0), maxSafeInteger);
+                };
+
+                return function from(arrayLike/*, mapFn, thisArg */) {
+                    var C = this;
+                    var items = Object(arrayLike);
+                    if (arrayLike == null) {
+                        throw new TypeError('Array.from requires an array-like object - not null or undefined');
+                    }
+                    var mapFn = arguments.length > 1 ? arguments[1] : void undefined;
+                    var T;
+                    if (typeof mapFn !== 'undefined') {
+                        if (!isCallable(mapFn)) {
+                            throw new TypeError('Array.from: when provided, the second argument must be a function');
+                        }
+                        if (arguments.length > 2) {
+                            T = arguments[2];
+                        }
+                    }
+                    var len = toLength(items.length);
+                    var A = isCallable(C) ? Object(new C(len)) : new Array(len);
+                    var k = 0;
+                    var kValue;
+                    while (k < len) {
+                        kValue = items[k];
+                        if (mapFn) {
+                            A[k] = typeof T === 'undefined' ? mapFn(kValue, k) : mapFn.call(T, kValue, k);
+                        } else {
+                            A[k] = kValue;
+                        }
+                        k += 1;
+                    }
+                    A.length = len;
+                    return A;
+                };
+            }());
+        }
+
+        // Polyfill for Array.prototype.find()
+        if (!Array.prototype.find) {
+          Object.defineProperty(Array.prototype, 'find', {
+            value: function(predicate) {
+              if (this == null) {
+                throw new TypeError('"this" is null or not defined');
+              }
+              var o = Object(this);
+              var len = o.length >>> 0;
+              if (typeof predicate !== 'function') {
+                throw new TypeError('predicate must be a function');
+              }
+              var thisArg = arguments[1];
+              var k = 0;
+              while (k < len) {
+                var kValue = o[k];
+                if (predicate.call(thisArg, kValue, k, o)) {
+                  return kValue;
+                }
+                k++;
+              }
+              return undefined;
+            }
+          });
+        }
+
+        var defaultGreenRoofData = [
+            // vegetation/hardscape
+            {"id":"QB1","category":"vegetation/hardscape","item":"sedum mat","base_cost":4.25,"hoisting_sf_per_pallet":400,"install_rate_sf_per_mh":128,"depth_inches":1,"dry_weight_psf":3.07,"saturated_weight_psf":5.12,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB2","category":"vegetation/hardscape","item":"plugs (8\" o.c.)","base_cost":2.90,"hoisting_sf_per_pallet":689,"install_rate_sf_per_mh":75,"depth_inches":0,"dry_weight_psf":3.07,"saturated_weight_psf":5.12,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB3","category":"vegetation/hardscape","item":"perennials , grasses & groundcover (12\" o.c.)","base_cost":8.00,"hoisting_sf_per_pallet":50,"install_rate_sf_per_mh":50,"depth_inches":0,"dry_weight_psf":15,"saturated_weight_psf":28,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB4","category":"vegetation/hardscape","item":"trees and shrubs (36\" o.c.)","base_cost":15.00,"hoisting_sf_per_pallet":15,"install_rate_sf_per_mh":25,"depth_inches":0,"dry_weight_psf":50,"saturated_weight_psf":75,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB5","category":"vegetation/hardscape","item":"3\" deep mulch ","base_cost":0.75,"hoisting_sf_per_pallet":108,"install_rate_sf_per_mh":108,"depth_inches":3,"dry_weight_psf":3,"saturated_weight_psf":5,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB6","category":"vegetation/hardscape","item":"3\" deep washed river rock (ballast)","base_cost":1.50,"hoisting_sf_per_pallet":108,"install_rate_sf_per_mh":100,"depth_inches":3,"dry_weight_psf":25,"saturated_weight_psf":28,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB7","category":"vegetation/hardscape","item":"pre-planted trays, 4\" deep","base_cost":15.50,"hoisting_sf_per_pallet":80,"install_rate_sf_per_mh":100,"depth_inches":4,"dry_weight_psf":18,"saturated_weight_psf":25,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB8","category":"vegetation/hardscape","item":"pre-planted trays, 6\" deep","base_cost":21.00,"hoisting_sf_per_pallet":64,"install_rate_sf_per_mh":85,"depth_inches":6,"dry_weight_psf":22,"saturated_weight_psf":33,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB9","category":"vegetation/hardscape","item":"concrete pavers on pedestals","base_cost":10.00,"hoisting_sf_per_pallet":60,"install_rate_sf_per_mh":64,"depth_inches":3,"dry_weight_psf":25,"saturated_weight_psf":28,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            // media
+            {"id":"QB10","category":"media","item":"Growing Media, 1\"","base_cost":0.62,"hoisting_sf_per_pallet":324,"install_rate_sf_per_mh":324,"depth_inches":1,"dry_weight_psf":4.36,"saturated_weight_psf":6.92,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB11","category":"media","item":"Growing Media, 1.5\"","base_cost":0.94,"hoisting_sf_per_pallet":161,"install_rate_sf_per_mh":161,"depth_inches":1.5,"dry_weight_psf":6.54,"saturated_weight_psf":10.38,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB12","category":"media","item":"Growing Media, 2\"","base_cost":1.24,"hoisting_sf_per_pallet":162,"install_rate_sf_per_mh":162,"depth_inches":2,"dry_weight_psf":8.72,"saturated_weight_psf":13.83,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB13","category":"media","item":"Growing Media, 2.5\"","base_cost":1.55,"hoisting_sf_per_pallet":129.6,"install_rate_sf_per_mh":129.6,"depth_inches":2.5,"dry_weight_psf":10.9,"saturated_weight_psf":17.29,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB14","category":"media","item":"Growing Media, 3\"","base_cost":1.86,"hoisting_sf_per_pallet":108,"install_rate_sf_per_mh":108,"depth_inches":3,"dry_weight_psf":13.08,"saturated_weight_psf":20.74,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB15","category":"media","item":"Growing Media, 3.5\"","base_cost":2.17,"hoisting_sf_per_pallet":92.57,"install_rate_sf_per_mh":92.57,"depth_inches":3.5,"dry_weight_psf":15.26,"saturated_weight_psf":24.2,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB16","category":"media","item":"Growing Media, 4\"","base_cost":2.48,"hoisting_sf_per_pallet":81,"install_rate_sf_per_mh":81,"depth_inches":4,"dry_weight_psf":17.44,"saturated_weight_psf":27.65,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB17","category":"media","item":"Growing Media, 4.5\"","base_cost":2.79,"hoisting_sf_per_pallet":72,"install_rate_sf_per_mh":72,"depth_inches":4.5,"dry_weight_psf":19.62,"saturated_weight_psf":31.11,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB18","category":"media","item":"Growing Media, 5\"","base_cost":3.10,"hoisting_sf_per_pallet":64.8,"install_rate_sf_per_mh":64.8,"depth_inches":5,"dry_weight_psf":21.8,"saturated_weight_psf":34.56,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB19","category":"media","item":"Growing Media, 5.5\"","base_cost":3.41,"hoisting_sf_per_pallet":58.91,"install_rate_sf_per_mh":58.91,"depth_inches":5.5,"dry_weight_psf":23.98,"saturated_weight_psf":38.02,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB20","category":"media","item":"Growing Media, 6\"","base_cost":3.72,"hoisting_sf_per_pallet":54,"install_rate_sf_per_mh":54,"depth_inches":6,"dry_weight_psf":26.16,"saturated_weight_psf":41.47,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB21","category":"media","item":"Growing Media, 6.5\"","base_cost":4.01,"hoisting_sf_per_pallet":44.93,"install_rate_sf_per_mh":44.93,"depth_inches":6.5,"dry_weight_psf":28.34,"saturated_weight_psf":44.93,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB22","category":"media","item":"Growing Media, 7\"","base_cost":4.32,"hoisting_sf_per_pallet":48.38,"install_rate_sf_per_mh":48.38,"depth_inches":7,"dry_weight_psf":30.52,"saturated_weight_psf":48.38,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB23","category":"media","item":"Growing Media, 7.5\"","base_cost":4.63,"hoisting_sf_per_pallet":43.2,"install_rate_sf_per_mh":43.2,"depth_inches":7.5,"dry_weight_psf":32.7,"saturated_weight_psf":51.84,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB24","category":"media","item":"Growing Media, 8\"","base_cost":4.96,"hoisting_sf_per_pallet":40.5,"install_rate_sf_per_mh":40.5,"depth_inches":8,"dry_weight_psf":34.88,"saturated_weight_psf":55.29,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB25","category":"media","item":"Growing Media, 10\"","base_cost":6.20,"hoisting_sf_per_pallet":32.4,"install_rate_sf_per_mh":32.4,"depth_inches":10,"dry_weight_psf":43.6,"saturated_weight_psf":69.12,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB26","category":"media","item":"Growing Media, 12\"","base_cost":7.44,"hoisting_sf_per_pallet":27,"install_rate_sf_per_mh":27,"depth_inches":12,"dry_weight_psf":52.3,"saturated_weight_psf":83,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB27","category":"media","item":"Growing Media, 14\"","base_cost":8.64,"hoisting_sf_per_pallet":23.15,"install_rate_sf_per_mh":23.15,"depth_inches":14,"dry_weight_psf":61.04,"saturated_weight_psf":93.76,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB28","category":"media","item":"Growing Media, 16\"","base_cost":9.92,"hoisting_sf_per_pallet":20.25,"install_rate_sf_per_mh":20.25,"depth_inches":16,"dry_weight_psf":69.76,"saturated_weight_psf":110.58,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB29","category":"media","item":"Growing Media, 24\"","base_cost":14.88,"hoisting_sf_per_pallet":13.5,"install_rate_sf_per_mh":13.5,"depth_inches":24,"dry_weight_psf":104.6,"saturated_weight_psf":166,"storage_type":"retention","storage_ratio":0.4,"cost_unit":"sf"},
+            // retention & filtration
+            {"id":"QB30","category":"retention & filtration","item":"Needled Mineral Wool, 1\" (1 layer)","base_cost":1.96,"hoisting_sf_per_pallet":645.6,"install_rate_sf_per_mh":646,"depth_inches":1,"dry_weight_psf":0.82,"saturated_weight_psf":5.58,"storage_type":"retention","storage_ratio":0.93,"cost_unit":"sf"},
+            {"id":"QB31","category":"retention & filtration","item":"Needled Mineral Wool, 2\" (2 layers)","base_cost":3.92,"hoisting_sf_per_pallet":323,"install_rate_sf_per_mh":323,"depth_inches":2,"dry_weight_psf":1.64,"saturated_weight_psf":9.52,"storage_type":"retention","storage_ratio":0.93,"cost_unit":"sf"},
+            {"id":"QB32","category":"retention & filtration","item":"Needled Mineral Wool, 3\" (3 layers)","base_cost":5.88,"hoisting_sf_per_pallet":216,"install_rate_sf_per_mh":216,"depth_inches":3,"dry_weight_psf":2.46,"saturated_weight_psf":24.3,"storage_type":"retention","storage_ratio":0.93,"cost_unit":"sf"},
+            {"id":"QB33","category":"retention & filtration","item":"Filter Fabric, standard","base_cost":0.50,"hoisting_sf_per_pallet":3000,"install_rate_sf_per_mh":1000,"depth_inches":0.05,"dry_weight_psf":0.01,"saturated_weight_psf":0.02,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB34","category":"retention & filtration","item":"Root Barrier, standard","base_cost":1.00,"hoisting_sf_per_pallet":1750,"install_rate_sf_per_mh":650,"depth_inches":0.05,"dry_weight_psf":0.01,"saturated_weight_psf":0.02,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            // detention
+            {"id":"QB35","category":"detention","item":"Honeycomb Reservior, 0.5\"","base_cost":1.40,"hoisting_sf_per_pallet":5120,"install_rate_sf_per_mh":640,"depth_inches":0.5,"dry_weight_psf":0.17,"saturated_weight_psf":3.1,"storage_type":"detention","storage_ratio":0.96,"cost_unit":"sf"},
+            {"id":"QB36","category":"detention","item":"Honeycomb Reservior, 1\"","base_cost":2.50,"hoisting_sf_per_pallet":2560,"install_rate_sf_per_mh":576,"depth_inches":1,"dry_weight_psf":0.33,"saturated_weight_psf":6.2,"storage_type":"detention","storage_ratio":0.96,"cost_unit":"sf"},
+            {"id":"QB37","category":"detention","item":"Honeycomb Reservior, 2\"","base_cost":4.75,"hoisting_sf_per_pallet":1280,"install_rate_sf_per_mh":448,"depth_inches":2,"dry_weight_psf":0.66,"saturated_weight_psf":12.4,"storage_type":"detention","storage_ratio":0.96,"cost_unit":"sf"},
+            {"id":"QB38","category":"detention","item":"Honeycomb Reservior, 3\"","base_cost":7.03,"hoisting_sf_per_pallet":832,"install_rate_sf_per_mh":320,"depth_inches":3,"dry_weight_psf":1,"saturated_weight_psf":18.6,"storage_type":"detention","storage_ratio":0.96,"cost_unit":"sf"},
+            {"id":"QB39","category":"detention","item":"Honeycomb Reservior, 4\"","base_cost":9.75,"hoisting_sf_per_pallet":640,"install_rate_sf_per_mh":256,"depth_inches":4,"dry_weight_psf":1.33,"saturated_weight_psf":24.8,"storage_type":"detention","storage_ratio":0.96,"cost_unit":"sf"},
+            {"id":"QB40", "category": "detention_layer", "item": "DL-5 Detention Layer", "base_cost": 2.88, "hoisting_sf_per_pallet": 2152, "install_rate_sf_per_mh": 500, "depth_inches": 0.2, "dry_weight_psf":0.2,"saturated_weight_psf":0.96,"storage_type":"detention","storage_ratio":0.4,"cost_unit":"sf"},
+            {"id":"QB41", "category": "detention", "item": "Blue Roof Cells", "base_cost": 10.00, "hoisting_sf_per_pallet": 24.8, "install_rate_sf_per_mh": 1.00, "depth_inches": 4, "dry_weight_psf":1,"saturated_weight_psf":24.8,"storage_type":"detention","storage_ratio":0.96,"cost_unit":"sf"},
+            // drainage
+            {"id":"QB42","category":"drainage","item":"Drainage Panel, extensive, 0.5\" thick","base_cost":1.50,"hoisting_sf_per_pallet":1500,"install_rate_sf_per_mh":750,"depth_inches":0.5,"dry_weight_psf":0.2,"saturated_weight_psf":2,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB43","category":"drainage","item":"Drainage Panel, intensive, 1\" thick","base_cost":2.50,"hoisting_sf_per_pallet":1500,"install_rate_sf_per_mh":500,"depth_inches":1,"dry_weight_psf":0.5,"saturated_weight_psf":6,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            {"id":"QB44","category":"drainage","item":"Clean-washed stone, 1.5\" deep","base_cost":0.40,"hoisting_sf_per_pallet":324,"install_rate_sf_per_mh":1500,"depth_inches":1.5,"dry_weight_psf":12.5,"saturated_weight_psf":16.39,"storage_type":"none","storage_ratio":0,"cost_unit":"sf"},
+            // edging
+            {"id":"QB45","category":"edging","item":"Perimeter Edging, 4\"","base_cost":14.00,"hoisting_sf_per_pallet":2000,"install_rate_sf_per_mh":1000,"depth_inches":4,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            {"id":"QB46","category":"edging","item":"Perimeter Edging, 6\"","base_cost":17.00,"hoisting_sf_per_pallet":2000,"install_rate_sf_per_mh":900,"depth_inches":6,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            {"id":"QB47","category":"edging","item":"Perimeter Edging, 8\"","base_cost":22.00,"hoisting_sf_per_pallet":1750,"install_rate_sf_per_mh":800,"depth_inches":8,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            {"id":"QB48","category":"edging","item":"Perimeter Edging, 10\"","base_cost":26.00,"hoisting_sf_per_pallet":1500,"install_rate_sf_per_mh":600,"depth_inches":10,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            {"id":"QB49","category":"edging","item":"Perimeter Edging, 12\"","base_cost":35.00,"hoisting_sf_per_pallet":1200,"install_rate_sf_per_mh":500,"depth_inches":12,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            {"id":"QB50","category":"edging","item":"Perimeter Edging, 14\"","base_cost":42.00,"hoisting_sf_per_pallet":1100,"install_rate_sf_per_mh":400,"depth_inches":14,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            {"id":"QB51","category":"edging","item":"Perimeter Edging, 16\"","base_cost":50.00,"hoisting_sf_per_pallet":1000,"install_rate_sf_per_mh":400,"depth_inches":16,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"lf"},
+            // drain enclosures - Standard
+            {"id":"QB52","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 4\"","base_cost":200.00,"hoisting_sf_per_pallet":6000,"install_rate_sf_per_mh":3000,"depth_inches":4,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB53","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 6\"","base_cost":300.00,"hoisting_sf_per_pallet":6000,"install_rate_sf_per_mh":3000,"depth_inches":6,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB54","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 8\"","base_cost":400.00,"hoisting_sf_per_pallet":5000,"install_rate_sf_per_mh":2500,"depth_inches":8,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB55","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 10\"","base_cost":450.00,"hoisting_sf_per_pallet":5000,"install_rate_sf_per_mh":2500,"depth_inches":10,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB56","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 12\"","base_cost":500.00,"hoisting_sf_per_pallet":4000,"install_rate_sf_per_mh":2500,"depth_inches":12,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB57","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 14\"","base_cost":550.00,"hoisting_sf_per_pallet":4000,"install_rate_sf_per_mh":2000,"depth_inches":14,"dry_weight_psf":0,"saturated_weight_psf":0,"retention_capacity_in":0,"detention_capacity_in":0,"cost_unit":"ea"},
+            {"id":"QB58","type":"cleanout","category":"drain enclosures","item":"Std. Drain Enclosures, 16\"","base_cost":600.00,"hoisting_sf_per_pallet":4000,"install_rate_sf_per_mh":2000,"depth_inches":16,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            // drain enclosures - Purple Roof
+            {"id":"QB59","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 4\"","base_cost":650.00,"hoisting_sf_per_pallet":6000,"install_rate_sf_per_mh":3000,"depth_inches":4,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB60","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 6\"","base_cost":750.00,"hoisting_sf_per_pallet":6000,"install_rate_sf_per_mh":3000,"depth_inches":6,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB61","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 8\"","base_cost":800.00,"hoisting_sf_per_pallet":5000,"install_rate_sf_per_mh":2500,"depth_inches":8,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB62","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 10\"","base_cost":900.00,"hoisting_sf_per_pallet":5000,"install_rate_sf_per_mh":2500,"depth_inches":10,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB63","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 12\"","base_cost":1000.00,"hoisting_sf_per_pallet":4000,"install_rate_sf_per_mh":2500,"depth_inches":12,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB64","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 14\"","base_cost":1100.00,"hoisting_sf_per_pallet":4000,"install_rate_sf_per_mh":2000,"depth_inches":14,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"},
+            {"id":"QB65","type":"purple_roof","category":"drain enclosures","item":"Purple-Roof Enclosures, 16\"","base_cost":1200.00,"hoisting_sf_per_pallet":4000,"install_rate_sf_per_mh":2000,"depth_inches":16,"dry_weight_psf":0,"saturated_weight_psf":0,"storage_type":"none","storage_ratio":0,"cost_unit":"ea"}
+        ];
+
+        var greenRoofData = [];
+        var changeHistory = [];
+        var profileCount = 0;
+        var lastCalculationResults = [];
+        var App;
+        var globalDefaults = {
+            laborRate: 105, markup1: 15, markup2: 20,
+            craneCost: 6000, crewSize: 4, palletsPerDay: 100
+        };
+
+        var safeDivide = function(n, d) {
+            d = parseFloat(d);
+            return isNaN(d) || d === 0 ? 0 : parseFloat(n) / d;
+        };
+        var formatCurrency = function(v) {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+        };
+        var getItemById = function(id) {
+            return greenRoofData.find(function(item) {
+                return item.id === id;
+            });
+        };
+
+        // --- MODAL FUNCTIONS ---
+        function showModal(title, message, isConfirm) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('modal-cancel').style.display = isConfirm ? 'inline-block' : 'none';
+            
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal').classList.remove('hidden');
+
+            return new Promise(function(resolve) {
+                document.getElementById('modal-confirm').onclick = function() {
+                    hideModal();
+                    resolve(true);
+                };
+                document.getElementById('modal-cancel').onclick = function() {
+                    hideModal();
+                    resolve(false);
+                };
+            });
+        }
+        function hideModal() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        // --- DATA HANDLING ---
+        function loadData() {
+            greenRoofData = JSON.parse(localStorage.getItem('greenRoofData') || JSON.stringify(defaultGreenRoofData));
+            changeHistory = JSON.parse(localStorage.getItem('changeHistory') || '[]');
+            var savedDefaults = JSON.parse(localStorage.getItem('greenRoofGlobalDefaults'));
+            if (savedDefaults) globalDefaults = savedDefaults;
+        }
+
+        async function saveData() {
+            var oldData = JSON.parse(localStorage.getItem('greenRoofData')) || defaultGreenRoofData;
+            var newData = Array.from(App.dataTableBody.querySelectorAll('tr')).map(function(row) {
+                var itemData = getItemById(row.dataset.id);
+                return {
+                    id: row.dataset.id,
+                    category: row.querySelector('[data-field="category"]').value,
+                    item: row.querySelector('[data-field="item"]').value,
+                    base_cost: parseFloat(row.querySelector('[data-field="base_cost"]').value) || 0,
+                    hoisting_sf_per_pallet: parseFloat(row.querySelector('[data-field="hoisting_sf_per_pallet"]').value) || 0,
+                    install_rate_sf_per_mh: parseFloat(row.querySelector('[data-field="install_rate_sf_per_mh"]').value) || 0,
+                    depth_inches: parseFloat(row.querySelector('[data-field="depth_inches"]').value) || 0,
+                    dry_weight_psf: parseFloat(row.querySelector('[data-field="dry_weight_psf"]').value) || 0,
+                    saturated_weight_psf: parseFloat(row.querySelector('[data-field="saturated_weight_psf"]').value) || 0,
+                    storage_type: row.querySelector('[data-field="storage_type"]').value,
+                    storage_ratio: parseFloat(row.querySelector('[data-field="storage_ratio"]').value) || 0,
+                    cost_unit: itemData ? itemData.cost_unit : 'sf'
+                };
+            });
+            logChanges(oldData, newData);
+            greenRoofData = newData;
+            localStorage.setItem('greenRoofData', JSON.stringify(greenRoofData));
+            
+            globalDefaults.laborRate = parseFloat(document.getElementById('defaultLaborRate').value) || 0;
+            globalDefaults.markup1 = parseFloat(document.getElementById('defaultMarkup1').value) || 0;
+            globalDefaults.markup2 = parseFloat(document.getElementById('defaultMarkup2').value) || 0;
+            globalDefaults.craneCost = parseFloat(document.getElementById('defaultCraneCost').value) || 0;
+            globalDefaults.crewSize = parseFloat(document.getElementById('defaultCrewSize').value) || 0;
+            globalDefaults.palletsPerDay = parseFloat(document.getElementById('defaultPalletsPerDay').value) || 0;
+            localStorage.setItem('greenRoofGlobalDefaults', JSON.stringify(globalDefaults));
+            
+            await showModal('Success', 'Data and default settings have been saved successfully.');
+            renderAll();
+        }
+
+        function logChanges(oldData, newData) {
+            var changes = [];
+            newData.forEach(function(newItem) {
+                var oldItem = oldData.find(function(item) { return item.id === newItem.id; });
+                if (!oldItem) {
+                    changes.push({ item: newItem.item, field: 'newItem', oldValue: null, newValue: 'Item Added' });
+                } else {
+                    Object.keys(newItem).forEach(function(key) {
+                        if (key !== 'id' && String(newItem[key]) !== String(oldItem[key])) {
+                            changes.push({ item: newItem.item, field: key, oldValue: oldItem[key], newValue: newItem[key] });
+                        }
+                    });
+                }
+            });
+            if (changes.length > 0) {
+                changeHistory.unshift({ timestamp: new Date().toISOString(), changes: changes });
+                localStorage.setItem('changeHistory', JSON.stringify(changeHistory));
+                renderChangeHistory();
+            }
+        }
+        
+        async function revertToDefaults() {
+            const confirmed = await showModal('Revert to Defaults?', 'This will clear all custom data, global defaults, and change history. This action cannot be undone.', true);
+            if (confirmed) {
+                localStorage.removeItem('greenRoofData');
+                localStorage.removeItem('changeHistory');
+                localStorage.removeItem('greenRoofGlobalDefaults');
+                location.reload();
+            }
+        }
+
+        function switchView(viewName) {
+            Object.values(App.views).forEach(function(v) { if(v) v.classList.remove('view-active') });
+            App.tabs.forEach(function(t) { t.classList.remove('tab-active') });
+            if (App.views[viewName]) App.views[viewName].classList.add('view-active');
+            var activeTab = document.querySelector('.tab-link[data-view="' + viewName + '"]');
+            if (activeTab) activeTab.classList.add('tab-active');
+        }
+
+        function renderAll() {
+            var openStates = Array.from(App.profilesContainer.querySelectorAll('.profile-form'))
+                                  .map(function(p) { return p.querySelector('.accordion-content').classList.contains('open'); });
+            App.profilesContainer.innerHTML = '';
+            profileCount = 0;
+            var count = openStates.length || 1;
+            for(var i=0; i < count; i++) addProfile(openStates[i] === true || openStates.length === 0);
+            populateGlobalInputs();
+            renderDataManagementTable();
+            renderChangeHistory();
+        }
+
+        function createProfileComponent(profileId, isOpen) {
+            var categories = [
+                { id: 'vegetation/hardscape', title: 'Vegetation/Hardscape', type: 'radio' }, 
+                { id: 'media', title: 'Growing Media', type: 'radio' },
+                { id: 'retention & filtration', title: 'Retention & Filtration Layer', type: 'custom' },
+                { id: 'detention', title: 'Honeycomb Reservoir Layer', type: 'radio' },
+                { id: 'detention_layer', title: 'Detention Layer', type: 'checkbox' },
+                { id: 'drainage', title: 'Drainage Layer', type: 'radio' }, 
+                { id: 'edging', title: 'Perimeter Edging', type: 'radio' },
+                { id: 'drain enclosures', title: 'Drain Enclosures', type: 'radio' }
+            ];
+            var div = document.createElement('div');
+            div.className = 'profile-form bg-white rounded-lg shadow-sm border border-slate-200';
+            div.id = 'profile-' + profileId;
+            div.dataset.profileId = profileId;
+            div.innerHTML = `
+                <div class="accordion-header flex justify-between items-center p-3 cursor-pointer hover:bg-slate-50 rounded-t-lg">
+                    <input type="text" id="profileName-${profileId}" placeholder="Profile ${profileId}" class="profile-name text-md font-semibold text-slate-800 border-none focus:ring-1 focus:ring-blue-300 p-1 rounded w-full md:w-auto" value="Profile ${profileId}">
+                    <div class="flex items-center gap-x-3 ml-3">
+                        <div>
+                            <label for="profileRoofArea-${profileId}" class="text-xs font-medium text-slate-500">Area (SF)</label>
+                            <input type="number" id="profileRoofArea-${profileId}" value="10000" class="profile-roof-area font-bold w-24 rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <button class="remove-profile-btn bg-red-100 text-red-700 hover:bg-red-200 p-2 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                        <svg class="h-5 w-5 chevron-icon transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                </div>
+                <div class="accordion-content px-6 ${isOpen ? 'open' : ''}">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">${categories.map(function(c) { return createComponentSection(c, profileId); }).join('')}</div>
+                    <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                        <h4 class="font-semibold text-blue-800">Calculated Total Depth:</h4>
+                        <p><strong id="total-depth-display-${profileId}">0.0</strong> inches</p>
+                    </div>
+                </div>`;
+            div.querySelector('.remove-profile-btn').onclick = function(e) { 
+                e.stopPropagation(); 
+                showModal('Confirm Removal', 'Are you sure you want to remove "' + div.querySelector('.profile-name').value + '"?', true)
+                .then(function(confirmed) {
+                    if (confirmed) div.remove();
+                });
+            };
+            ['.profile-name', '.profile-roof-area'].forEach(function(sel) { div.querySelector(sel).onclick = function(e) { e.stopPropagation(); }; });
+            div.onchange = function() { handleProfileChange(profileId); };
+            div.oninput = function(e) { 
+                if(e.target.matches('.edging_multiplier, .drain_multiplier')) updateMultiplierNotes(profileId); 
+                if(e.target.matches('.profile-roof-area')) validateAreaInput(e.target);
+            };
+            return div;
+        }
+
+        function createComponentSection(category, profileId) {
+            var items = greenRoofData.filter(function(item) { return item.category === category.id; });
+            if(category.id === 'edging') {
+                return '<div class="border p-4 rounded-lg">' +
+                    '<label class="text-base font-medium text-slate-900 mb-2 block">' + category.title + '</label>' +
+                    '<select id="' + category.id + '-select-' + profileId + '" name="' + category.id + '-' + profileId + '" class="component-input mt-1 block w-full rounded-md border-slate-300 shadow-sm p-2">' +
+                        '<option value="none">None</option>' + items.map(function(i) { return '<option value="' + i.id + '" data-depth="' + i.depth_inches + '" ' + (i.id === 'ed1' ? 'selected' : '') + '>' + i.item + '</option>'; }).join('') +
+                    '</select>' +
+                    '<div class="flex items-center gap-2 mt-2">' +
+                        '<label for="edging_multiplier-' + profileId + '" class="text-sm">Multiplier:</label>' +
+                        '<input type="number" id="edging_multiplier-' + profileId + '" value="0.1" class="edging_multiplier w-20 p-1 block rounded-md border-slate-300 shadow-sm sm:text-sm">' +
+                    '</div>' +
+                    '<span id="edging-note-' + profileId + '" class="text-xs text-slate-500 mt-1 block"></span>' +
+                '</div>';
+            }
+             if (category.id === 'drain enclosures') {
+                return '<fieldset class="border p-4 rounded-lg" id="drain-enclosure-fieldset-' + profileId + '">' +
+                    '<legend class="text-base font-medium text-slate-900 mb-2">' + category.title + '</legend>' +
+                    '<div class="space-y-2 mt-2">' +
+                         '<div class="relative flex items-start">' +
+                            '<input type="radio" id="drain_none-' + profileId + '" name="drain_enclosure_type-' + profileId + '" value="none" class="h-4 w-4 mt-1 border-gray-300 component-input">' +
+                            '<label for="drain_none-' + profileId + '" class="font-medium text-gray-700 ml-3">None</label>' +
+                        '</div>' +
+                        '<div class="relative flex items-start">' +
+                            '<input type="radio" id="drain_cleanout-' + profileId + '" name="drain_enclosure_type-' + profileId + '" value="cleanout" class="h-4 w-4 mt-1 border-gray-300 component-input" checked>' +
+                            '<label for="drain_cleanout-' + profileId + '" class="font-medium text-gray-700 ml-3">Standard Drain Enclosures</label>' +
+                        '</div>' +
+                        '<div class="relative flex items-start">' +
+                            '<input type="radio" id="drain_purple_roof-' + profileId + '" name="drain_enclosure_type-' + profileId + '" value="purple_roof" class="h-4 w-4 mt-1 border-gray-300 component-input">' +
+                            '<label for="drain_purple_roof-' + profileId + '" class="font-medium text-gray-700 ml-3">Purple-Roof Enclosures</label>' +
+                        '</div>' +
+                    '</div>' +
+                     '<div class="flex items-center gap-2 mt-2">' +
+                        '<label for="drain_multiplier-' + profileId + '" class="text-sm">Multiplier:</label>' +
+                        '<input type="number" id="drain_multiplier-' + profileId + '" value="0.0005" class="drain_multiplier w-20 p-1 block rounded-md border-slate-300 shadow-sm sm:text-sm">' +
+                    '</div>' +
+                    '<span id="drain-note-' + profileId + '" class="text-xs text-slate-500 mt-1 block"></span>' +
+                    '<fieldset class="hidden">' + items.map(function(i) { return '<input id="' + i.id + '-' + profileId + '" name="drain_enclosure_item-' + profileId + '" type="radio" value="' + i.id + '" class="component-input">'; }).join('') + '</fieldset>' +
+                '</fieldset>';
+            }
+            if (category.id === 'retention & filtration') {
+                var mineralWoolItems = items.filter(function(i) { return i.item.indexOf('Needled Mineral Wool') !== -1; });
+                var otherItems = items.filter(function(i) { return i.item.indexOf('Needled Mineral Wool') === -1; });
+
+                var mineralWoolHtml = '<div class="space-y-2 mt-2">' +
+                    '<div class="relative flex items-start">' +
+                        '<input type="radio" id="mineral_wool_none-' + profileId + '" name="mineral_wool-' + profileId + '" value="none" class="h-4 w-4 mt-1 border-gray-300 component-input" checked>' +
+                        '<label for="mineral_wool_none-' + profileId + '" class="font-medium text-gray-700 ml-3">None</label>' +
+                    '</div>' +
+                    mineralWoolItems.map(function(i) {
+                        return '<div class="relative flex items-start">' +
+                            '<input id="' + i.id + '-' + profileId + '" name="mineral_wool-' + profileId + '" type="radio" value="' + i.id + '" class="h-4 w-4 mt-1 border-gray-300 component-input">' +
+                            '<label for="' + i.id + '-' + profileId + '" class="font-medium text-gray-700 ml-3">' + i.item + '</label>' +
+                        '</div>';
+                    }).join('') +
+                '</div>';
+
+                var otherItemsHtml = '<div class="space-y-2 mt-4">' +
+                    otherItems.map(function(i) {
+                        return '<div class="relative flex items-start"><div class="flex h-5 items-center"><input id="' + i.id + '-' + profileId + '" name="' + i.id + '-' + profileId + '" type="checkbox" value="' + i.id + '" class="h-4 w-4 rounded border-gray-300 component-input"></div><div class="ml-3 text-sm"><label for="' + i.id + '-' + profileId + '" class="font-medium">' + i.item + '</label></div></div>';
+                    }).join('') +
+                '</div>';
+
+                return '<fieldset class="border p-4 rounded-lg">' +
+                    '<legend class="text-base font-medium text-slate-900 mb-2">' + category.title + '</legend>' +
+                    mineralWoolHtml +
+                    (otherItems.length > 0 ? '<hr class="my-4">' : '') +
+                    otherItemsHtml +
+                '</fieldset>';
+            }
+            if (category.type === 'radio') {
+                return '<div class="border p-4 rounded-lg">' +
+                    '<label for="' + category.id + '-select-' + profileId + '" class="text-base font-medium text-slate-900 mb-2 block">' + category.title.replace(/_/g, ' ') + '</label>' +
+                    '<select id="' + category.id + '-select-' + profileId + '" name="' + category.id + '-' + profileId + '" class="component-input mt-1 block w-full rounded-md border-slate-300 shadow-sm p-2">' +
+                        '<option value="none" selected>None</option>' + items.map(function(i) { return '<option value="' + i.id + '">' + i.item + '</option>'; }).join('') +
+                    '</select>' +
+                '</div>';
+            }
+            if (category.type === 'checkbox') {
+                return '<fieldset class="border p-4 rounded-lg">' +
+                    '<legend class="text-base font-medium text-slate-900 mb-2">' + category.title.replace(/_/g, ' ') + '</legend>' +
+                    '<div class="space-y-2 mt-2">' + items.map(function(i) { return '<div class="relative flex items-start"><div class="flex h-5 items-center"><input id="' + i.id + '-' + profileId + '" name="' + i.id + '-' + profileId + '" type="checkbox" value="' + i.id + '" class="h-4 w-4 rounded border-gray-300 component-input"></div><div class="ml-3 text-sm"><label for="' + i.id + '-' + profileId + '" class="font-medium">' + i.item + '</label></div></div>'; }).join('') + '</div>' +
+                '</fieldset>';
+            }
+            return '';
+        }
+        
+        function renderDetailedResults(results) {
+             App.resultsContainer.innerHTML = results.map(function(res) { return `
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 mb-6">
+                    <h3 class="text-xl font-bold text-blue-700 mb-4">${res.name}</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-center">
+                        <div class="bg-slate-100 p-3 rounded-lg"><p class="text-sm text-slate-600">Total Cost/SF</p><p class="text-lg font-semibold text-slate-900">${formatCurrency(res.totalCostPerSf)}</p></div>
+                        <div class="bg-slate-100 p-3 rounded-lg"><p class="text-sm text-slate-600">Profile Roof Area</p><p class="text-lg font-semibold text-slate-900">${res.roofArea.toLocaleString()} SF</p></div>
+                        <div class="bg-green-100 p-3 rounded-lg col-span-2"><p class="text-sm text-green-700">Total Project Cost</p><p class="text-2xl font-bold text-green-800">${formatCurrency(res.totalProjectCost)}</p></div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-center">
+                        <div class="bg-slate-100 p-3 rounded-lg"><p class="text-sm text-slate-600">Dry Weight</p><p class="text-lg font-semibold text-slate-900">${res.performance.dry_weight_psf.toFixed(2)} psf</p></div>
+                        <div class="bg-slate-100 p-3 rounded-lg"><p class="text-sm text-slate-600">Saturated Weight</p><p class="text-lg font-semibold text-slate-900">${res.performance.saturated_weight_psf.toFixed(2)} psf</p></div>
+                        <div class="bg-slate-100 p-3 rounded-lg"><p class="text-sm text-slate-600">Retention</p><p class="text-lg font-semibold text-slate-900">${res.performance.retention_capacity_in.toFixed(2)}\"</p></div>
+                        <div class="bg-slate-100 p-3 rounded-lg"><p class="text-sm text-slate-600">Detention</p><p class="text-lg font-semibold text-slate-900">${res.performance.detention_capacity_in.toFixed(2)}\"</p></div>
+                    </div>
+                    <h4 class="text-lg font-semibold mb-2">Detailed Breakdown</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left"><thead class="bg-slate-50"><tr>
+                            <th class="p-2 font-medium">Item</th><th class="p-2 font-medium">Quantity</th>
+                            <th class="p-2 font-medium">Material Cost/SF</th><th class="p-2 font-medium">Hoisting Cost/SF</th>
+                            <th class="p-2 font-medium">Install Cost/SF</th><th class="p-2 font-medium">F&I Cost/SF</th>
+                        </tr></thead><tbody class="divide-y divide-slate-200">
+                        ${res.breakdown.map(function(i) { return `<tr>
+                            <td class="p-2">${i.item.item}</td><td class="p-2">${i.quantity.toLocaleString(undefined, {maximumFractionDigits: 2})} ${i.item.cost_unit.toUpperCase()}</td>
+                            <td class="p-2">${formatCurrency(i.materialCostSf)}</td><td class="p-2">${formatCurrency(i.hoistingCostSf)}</td>
+                            <td class="p-2">${formatCurrency(i.installCostSf)}</td><td class="p-2 font-semibold">${formatCurrency(i.furnishedInstalledPrice)}</td>
+                        </tr>`; }).join('')}
+                        <tr class="font-bold bg-slate-100">
+                            <td class="p-2" colspan="2">Totals</td>
+                            <td class="p-2">${formatCurrency(res.totals.material)}</td><td class="p-2">${formatCurrency(res.totals.hoisting)}</td>
+                            <td class="p-2">${formatCurrency(res.totals.install)}</td><td class="p-2">${formatCurrency(res.totals.fi)}</td>
+                        </tr></tbody></table>
+                    </div>
+                </div>`; }).join('');
+            App.buttons.export.disabled = results.length === 0;
+        }
+
+        function renderEstimatingView(results) {
+            var globals = results[0]?.globalsUsed;
+            var projectName = document.getElementById('projectName').value || 'Project';
+            var grandTotal = { material: 0, hoisting: 0, install: 0, fi: 0, retention: 0, detention: 0 };
+            
+            var globalsHtml = globals ? `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-slate-900">Estimate for ${projectName}</h2>
+                    <p class="text-slate-500">Date: ${new Date().toLocaleDateString()}</p>
+                </div>
+                <div class="p-4 border rounded-lg bg-slate-50 mb-6">
+                    <h4 class="text-lg font-semibold text-slate-800 mb-2">Estimate Assumptions</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-sm">
+                        <span><strong>Labor Rate:</strong> ${formatCurrency(globals.laborRate)}/hr</span>
+                        <span><strong>Mark-up #1:</strong> ${globals.markup1}%</span>
+                        <span><strong>Mark-up #2:</strong> ${globals.markup2}%</span>
+                        <span><strong>Crane Cost:</strong> ${formatCurrency(globals.craneCost)}/day</span>
+                        <span><strong>Crew Size:</strong> ${globals.crewSize}</span>
+                        <span><strong>Pallets/Day:</strong> ${globals.palletsPerDay}</span>
+                    </div>
+                </div>
+            ` : '';
+            
+            var profilesHtml = results.map(function(res) {
+                grandTotal.material += res.totals.material * res.roofArea;
+                grandTotal.hoisting += res.totals.hoisting * res.roofArea;
+                grandTotal.install += res.totals.install * res.roofArea;
+                grandTotal.fi += res.totalProjectCost;
+                grandTotal.retention += res.performance.retention_capacity_cf;
+                grandTotal.detention += res.performance.detention_capacity_cf;
+
+                var categoryCosts = Object.entries(res.aggregated).map(function([cat, data]) { return `
+                    <tr>
+                        <td class="p-2 border-b capitalize">${cat.replace(/_/g, ' ')} <span class="text-slate-500 text-xs">(${data.description})</span></td>
+                        <td class="p-2 border-b text-right">${formatCurrency(data.cost)}</td>
+                    </tr>`; }).join('');
+                return `
+                <div class="p-6 border rounded-lg bg-white">
+                    <h3 class="text-2xl font-bold text-slate-800">${res.name}</h3>
+                    <p class="text-slate-600 mb-4">${res.roofArea.toLocaleString()} SF</p>
+                    <table class="w-full text-sm mb-4">
+                        <tbody>${categoryCosts}</tbody>
+                        <tfoot class="font-bold">
+                            <tr><td class="p-2 border-t-2">Total F&I / SF</td><td class="p-2 border-t-2 text-right">${formatCurrency(res.totalCostPerSf)}</td></tr>
+                            <tr><td class="p-2 bg-slate-100 rounded-l-lg">Est. Profile Cost</td><td class="p-2 bg-slate-100 rounded-r-lg text-right">${formatCurrency(res.totalProjectCost)}</td></tr>
+                        </tfoot>
+                    </table>
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div class="bg-blue-50 p-3 rounded-lg"><strong>Dry Weight:</strong><br>${res.performance.dry_weight_psf.toFixed(2)} psf</div>
+                        <div class="bg-blue-50 p-3 rounded-lg"><strong>Saturated Weight:</strong><br>${res.performance.saturated_weight_psf.toFixed(2)} psf</div>
+                        <div class="bg-blue-50 p-3 rounded-lg"><strong>Total Retention:</strong><br>${res.performance.retention_capacity_cf.toFixed(2)} CF</div>
+                        <div class="bg-blue-50 p-3 rounded-lg"><strong>Total Detention:</strong><br>${res.performance.detention_capacity_cf.toFixed(2)} CF</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            var totalSummaryHtml = `
+                <div class="mt-8 p-6 border-t-4 border-blue-600 bg-white rounded-lg shadow-lg">
+                     <h3 class="text-2xl font-bold text-slate-800 mb-4">Total Project Summary</h3>
+                     <table class="w-full text-base">
+                        <tbody>
+                            <tr><td class="py-2">Total Material Cost</td><td class="py-2 text-right font-semibold">${formatCurrency(grandTotal.material)}</td></tr>
+                            <tr><td class="py-2">Total Hoisting Cost</td><td class="py-2 text-right font-semibold">${formatCurrency(grandTotal.hoisting)}</td></tr>
+                            <tr><td class="py-2 border-b">Total Installation Cost</td><td class="py-2 border-b text-right font-semibold">${formatCurrency(grandTotal.install)}</td></tr>
+                            <tr class="font-bold text-xl"><td class="pt-4">Total Furnished & Installed Cost</td><td class="pt-4 text-right">${formatCurrency(grandTotal.fi)}</td></tr>
+                            <tr class="font-bold text-lg"><td class="pt-4">Total Retention</td><td class="pt-4 text-right">${grandTotal.retention.toFixed(2)} CF</td></tr>
+                            <tr class="font-bold text-lg"><td class="pt-2">Total Detention</td><td class="pt-2 text-right">${grandTotal.detention.toFixed(2)} CF</td></tr>
+                        </tbody>
+                     </table>
+                </div>
+            `;
+            
+            var footerHtml = '<div class="text-xs text-slate-500 mt-8 text-center print-footer">This information is provided for budgetary purposes only, and is based on standard commercial construction rates and the cost & production assumptions noted.</div>';
+
+            App.views.estimating.querySelector('#estimate-summary-container').innerHTML = globalsHtml + profilesHtml + totalSummaryHtml + footerHtml;
+        }
+
+        function renderDataManagementTable() {
+            App.dataTableBody.innerHTML = greenRoofData.map(function(item) { return `<tr data-id="${item.id}" class="hover:bg-slate-50">
+                <td class="p-1"><select data-field="category" class="w-full bg-transparent border-slate-300 rounded-md p-1">${[...new Set(greenRoofData.map(function(i) { return i.category; }))].map(function(c) { return `<option value="${c}" ${item.category === c ? 'selected' : ''}>${c.replace(/_/g, ' ')}</option>`; }).join('')}<option value="_new_">New Category</option></select></td>
+                <td class="p-1"><input type="text" data-field="item" value="${item.item}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="base_cost" value="${item.base_cost.toFixed(2)}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="hoisting_sf_per_pallet" value="${item.hoisting_sf_per_pallet}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="install_rate_sf_per_mh" value="${item.install_rate_sf_per_mh}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="depth_inches" value="${item.depth_inches}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="dry_weight_psf" value="${item.dry_weight_psf}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="saturated_weight_psf" value="${item.saturated_weight_psf}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><select data-field="storage_type" class="w-full bg-transparent border-slate-300 rounded-md p-1"><option value="none" ${item.storage_type === 'none' ? 'selected' : ''}>None</option><option value="retention" ${item.storage_type === 'retention' ? 'selected' : ''}>Retention</option><option value="detention" ${item.storage_type === 'detention' ? 'selected' : ''}>Detention</option></select></td>
+                <td class="p-1"><input type="number" step="0.01" data-field="storage_ratio" value="${item.storage_ratio}" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><span class="text-slate-500">${item.id}</span></td>
+                <td class="p-1"><button class="remove-item-btn text-red-500 hover:text-red-700">✖</button></td>
+            </tr>`; }).join('');
+            App.dataTableBody.querySelectorAll('.remove-item-btn').forEach(function(btn) { btn.onclick = function() {
+                showModal('Confirm Deletion', 'Are you sure you want to delete this item? This action is permanent.', true)
+                .then(function(confirmed) {
+                    if(confirmed) btn.closest('tr').remove();
+                });
+            }; });
+            App.dataTableBody.querySelectorAll('[data-field="category"]').forEach(function(sel) { sel.onchange = function(e) {
+                if (e.target.value === '_new_') { var cat = prompt('New category name:'); if (cat) e.target.add(new Option(cat,cat,true,true)); else e.target.selectedIndex = 0;}
+            }; });
+        }
+        
+        function renderChangeHistory() {
+            App.historyLogContainer.innerHTML = changeHistory.length === 0 ? '<p class="text-slate-500">No changes recorded.</p>' :
+            changeHistory.map(function(log) { return `<div class="p-4 border rounded-md bg-slate-50"><p class="font-semibold text-sm mb-2">${new Date(log.timestamp).toLocaleString()}</p><ul class="list-disc list-inside space-y-1 text-sm">${log.changes.map(function(c) { return `<li><span class="font-medium">${c.item}</span>: Field <span class="font-mono bg-slate-200 px-1 rounded">${c.field}</span> ${c.field === 'newItem' ? 'added' : `changed from <span class="font-mono bg-red-100 px-1 rounded">${c.oldValue}</span> to <span class="font-mono bg-green-100 px-1 rounded">${c.newValue}</span>`}.</li>`; }).join('')}</ul></div>`; }).join('');
+        }
+        
+        function addProfile(isOpen) {
+            profileCount++;
+            var newProfile = createProfileComponent(profileCount, isOpen);
+            App.profilesContainer.appendChild(newProfile);
+            updateMultiplierNotes(profileCount);
+            validateAreaInput(newProfile.querySelector('.profile-roof-area')); 
+        }
+
+        function handleAccordionToggle(header) {
+            header.nextElementSibling.classList.toggle('open');
+            header.querySelector('.chevron-icon').classList.toggle('rotate-180');
+        }
+
+        function updateMultiplierNotes(profileId){
+            var form = document.getElementById('profile-' + profileId);
+            if (!form) return;
+            var edgingMult = parseFloat(form.querySelector('#edging_multiplier-' + profileId).value) || 0;
+            form.querySelector('#edging-note-' + profileId).textContent = '(' + (edgingMult * 1000).toFixed(1) + ' LF per 1000 SF)';
+            var drainMult = parseFloat(form.querySelector('#drain_multiplier-' + profileId).value) || 0;
+            form.querySelector('#drain-note-' + profileId).textContent = '(' + (drainMult * 1000).toFixed(1) + ' EA per 1000 SF)';
+        }
+
+        function validateAreaInput(input) {
+            var value = parseFloat(input.value) || 0;
+            input.classList.remove('border-red-500', 'border-green-500', 'border-slate-300');
+            if (value > 0) {
+                input.classList.add('border-green-500');
+            } else {
+                input.classList.add('border-red-500');
+            }
+        }
+
+        function handleProfileChange(profileId) {
+            var form = document.getElementById('profile-' + profileId);
+            if (!form) return;
+
+            // Update Total Depth
+            var totalDepth = 0;
+            form.querySelectorAll('select.component-input, input.component-input:checked').forEach(function(input) {
+                var item = getItemById(input.value);
+                if (item && item.category !== 'drain enclosures' && item.category !== 'edging') {
+                    totalDepth += item.depth_inches;
+                }
+            });
+            document.getElementById('total-depth-display-' + profileId).textContent = totalDepth.toFixed(2);
+            
+            // Auto-select drain enclosure item based on edging
+            var edgingSelect = form.querySelector('#edging-select-' + profileId);
+            var selectedEdgingOption = edgingSelect.options[edgingSelect.selectedIndex];
+            var edgingDepth = parseFloat(selectedEdgingOption.dataset.depth) || 0;
+            var drainType = form.querySelector('input[name="drain_enclosure_type-' + profileId + '"]:checked').value;
+            
+            // Uncheck all hidden drain radios
+            form.querySelectorAll('input[name="drain_enclosure_item-' + profileId + '"]').forEach(function(r) { r.checked = false; });
+
+            if (edgingDepth > 0 && drainType !== 'none') {
+                 var drainItem = greenRoofData.find(function(i) { return i.category === 'drain enclosures' && i.type === drainType && i.depth_inches === edgingDepth; });
+                 if (drainItem) {
+                    var drainRadio = form.querySelector('input[value="' + drainItem.id + '"]');
+                    if(drainRadio) drainRadio.checked = true;
+                 }
+            }
+
+            updateMultiplierNotes(profileId);
+        }
+
+        function addNewItemToTable() {
+            var newItemId = 'new_' + Date.now();
+            var row = document.createElement('tr');
+            row.dataset.id = newItemId;
+            row.className = 'bg-yellow-50';
+            var categories = [...new Set(greenRoofData.map(function(i) { return i.category; }))];
+            row.innerHTML = `
+                <td class="p-1"><select data-field="category" class="w-full bg-transparent border-slate-300 rounded-md p-1">${categories.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('')}<option value="_new_">New Category</option></select></td>
+                <td class="p-1"><input type="text" data-field="item" placeholder="New Item Name" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" step="0.01" data-field="base_cost" value="0.00" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="hoisting_sf_per_pallet" value="0" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" data-field="install_rate_sf_per_mh" value="0" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" step="0.1" data-field="depth_inches" value="0" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" step="0.01" data-field="dry_weight_psf" value="0.00" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><input type="number" step="0.01" data-field="saturated_weight_psf" value="0.00" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><select data-field="storage_type" class="w-full bg-transparent border-slate-300 rounded-md p-1"><option value="none" selected>None</option><option value="retention">Retention</option><option value="detention">Detention</option></select></td>
+                <td class="p-1"><input type="number" step="0.01" data-field="storage_ratio" value="0.00" class="w-full bg-transparent border-slate-300 rounded-md p-1"></td>
+                <td class="p-1"><span class="text-slate-500">${newItemId}</span></td>
+                <td class="p-1"><button class="remove-item-btn text-red-500 hover:text-red-700">✖</button></td>`;
+            row.querySelector('.remove-item-btn').onclick = function() { row.remove(); };
+            App.dataTableBody.appendChild(row);
+        }
+        
+        function populateGlobalInputs() {
+            var defaultContainer = document.getElementById('default-globals-container');
+            var fields = [
+                { id: 'LaborRate', label: 'Labor Rate ($/hr)', value: globalDefaults.laborRate },
+                { id: 'CraneCost', label: 'Crane Cost ($/day)', value: globalDefaults.craneCost },
+                { id: 'CrewSize', label: 'Crew Size (Hoisting)', value: globalDefaults.crewSize },
+                { id: 'PalletsPerDay', label: 'Pallets Hoisted/Day', value: globalDefaults.palletsPerDay },
+                { id: 'Markup1', label: 'Mark-up #1 (%)', value: globalDefaults.markup1 },
+                { id: 'Markup2', label: 'Mark-up #2 (%)', value: globalDefaults.markup2 },
+            ];
+            defaultContainer.innerHTML = fields.map(function(f) { return '<div><label for="default' + f.id + '" class="block text-sm font-medium text-slate-700">' + f.label + '</label><input type="number" id="default' + f.id + '" value="' + f.value + '" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm sm:text-sm p-2"></div>'; }).join('');
+        }
+        
+        async function calculateAllCosts() {
+            var profiles = App.profilesContainer.querySelectorAll('.profile-form');
+            if (profiles.length === 0) {
+                await showModal('No Profiles', 'Please add at least one profile to calculate.');
+                return;
+            }
+            
+            lastCalculationResults = Array.from(profiles).map(function(form) {
+                var profileId = form.dataset.profileId;
+                var roofArea = parseFloat(form.querySelector('.profile-roof-area').value) || 0;
+                var breakdown = [];
+                var totals = { material: 0, hoisting: 0, install: 0, fi: 0 };
+                var performance = { dry_weight_psf: 0, saturated_weight_psf: 0, retention_capacity_in: 0, detention_capacity_in: 0, retention_capacity_cf: 0, detention_capacity_cf: 0 };
+                var aggregated = {};
+                var g = Object.assign({}, globalDefaults);
+                var costPerPallet = safeDivide(g.craneCost, g.palletsPerDay) + safeDivide(g.crewSize * 8 * g.laborRate, g.palletsPerDay);
+
+                form.querySelectorAll('select.component-input, input.component-input:checked').forEach(function(input) {
+                    var item = getItemById(input.value);
+                    if (!item) return;
+
+                    var materialCostSf = 0;
+                    var quantity = 0;
+                    var multiplier = 1;
+
+                    if(item.category === 'edging') {
+                        multiplier = parseFloat(form.querySelector('.edging_multiplier').value) || 0;
+                        materialCostSf = item.base_cost * multiplier;
+                        quantity = roofArea * multiplier;
+                    } else if (item.category === 'drain enclosures') {
+                         multiplier = parseFloat(form.querySelector('.drain_multiplier').value) || 0;
+                         quantity = roofArea * multiplier;
+                         materialCostSf = safeDivide(item.base_cost * quantity, roofArea);
+                    } else {
+                        materialCostSf = item.base_cost;
+                        quantity = roofArea;
+                    }
+                    
+                    var hoistingCostSf = safeDivide(costPerPallet, item.hoisting_sf_per_pallet);
+                    var installCostSf = safeDivide(g.laborRate, item.install_rate_sf_per_mh);
+                    var totalInstalledCostSf = materialCostSf + hoistingCostSf + installCostSf;
+                    var fiPrice = totalInstalledCostSf * (1 + safeDivide(g.markup1, 100)) * (1 + safeDivide(g.markup2, 100));
+                    
+                    breakdown.push({ item: item, quantity: quantity, materialCostSf: materialCostSf, hoistingCostSf: hoistingCostSf, installCostSf: installCostSf, furnishedInstalledPrice: fiPrice });
+                    totals.material += materialCostSf;
+                    totals.hoisting += hoistingCostSf;
+                    totals.install += installCostSf;
+                    totals.fi += fiPrice;
+                    
+                    if (item.category !== 'edging' && item.category !== 'drain enclosures') {
+                        performance.dry_weight_psf += item.dry_weight_psf || 0;
+                        performance.saturated_weight_psf += item.saturated_weight_psf || 0;
+                        if (item.storage_type === 'retention') {
+                            performance.retention_capacity_in += (item.depth_inches * (item.storage_ratio || 0));
+                        } else if (item.storage_type === 'detention') {
+                            performance.detention_capacity_in += (item.depth_inches * (item.storage_ratio || 0));
+                        }
+                    }
+
+                    if (!aggregated[item.category]) {
+                        aggregated[item.category] = { cost: 0, descriptions: [] };
+                    }
+                    aggregated[item.category].cost += fiPrice;
+                    aggregated[item.category].descriptions.push(item.item);
+                });
+
+                performance.retention_capacity_cf = (performance.retention_capacity_in / 12) * roofArea;
+                performance.detention_capacity_cf = (performance.detention_capacity_in / 12) * roofArea;
+
+                Object.keys(aggregated).forEach(function(cat) {
+                    aggregated[cat].description = aggregated[cat].descriptions.join(', ');
+                });
+
+                return { name: form.querySelector('.profile-name').value || 'Profile ' + profileId, roofArea: roofArea, breakdown: breakdown, totals: totals, performance: performance, aggregated: aggregated, totalCostPerSf: totals.fi, totalProjectCost: totals.fi * roofArea, globalsUsed: g };
+            });
+            
+            renderDetailedResults(lastCalculationResults);
+            renderEstimatingView(lastCalculationResults);
+            var estimatingTab = document.getElementById('estimating-tab');
+            if(lastCalculationResults.length > 0) {
+                 estimatingTab.classList.remove('tab-disabled');
+            } else {
+                 estimatingTab.classList.add('tab-disabled');
+            }
+        }
+
+        function exportToCSV() {
+            if (lastCalculationResults.length === 0) {
+                showModal('No Results', 'No results to export. Please calculate first.');
+                return;
+            }
+
+            var sanitizeCsvField = function(field) {
+                var sanitized = String(field);
+                if (sanitized.search(/("|,|\n)/g) >= 0) {
+                    sanitized = '"' + sanitized.replace(/"/g, '""') + '"';
+                }
+                return sanitized;
+            };
+
+            var csvContent = "data:text/csv;charset=utf-8,";
+            var headers = "Profile Name,Item Category,Item Name,Quantity,Unit,Material Cost/SF,Hoisting Cost/SF,Install Cost/SF,F&I Cost/SF\n";
+            csvContent += headers;
+            lastCalculationResults.forEach(function(profile) {
+                profile.breakdown.forEach(function(lineItem) {
+                    var row = [
+                        sanitizeCsvField(profile.name),
+                        sanitizeCsvField(lineItem.item.category),
+                        sanitizeCsvField(lineItem.item.item),
+                        lineItem.quantity.toFixed(2),
+                        sanitizeCsvField(lineItem.item.cost_unit.toUpperCase()),
+                        lineItem.materialCostSf.toFixed(2),
+                        lineItem.hoistingCostSf.toFixed(2),
+                        lineItem.installCostSf.toFixed(2),
+                        lineItem.furnishedInstalledPrice.toFixed(2)
+                    ].join(',');
+                    csvContent += row + "\n";
+                });
+            });
+
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", 'green_roof_estimate_' + new Date().toISOString().split('T')[0] + '.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function init() {
+            App = {
+                views: {
+                    calculator: document.getElementById('calculator-view'),
+                    'unit-pricing': document.getElementById('unit-pricing-view'),
+                    changeHistory: document.getElementById('change-history-view'),
+                    estimating: document.getElementById('estimating-view'),
+                },
+                tabs: document.querySelectorAll('.tab-link'),
+                profilesContainer: document.getElementById('profiles-container'),
+                resultsContainer: document.getElementById('results-container'),
+                dataTableBody: document.getElementById('data-table-body'),
+                historyLogContainer: document.getElementById('history-log-container'),
+                buttons: {
+                    addProfile: document.getElementById('addProfileBtn'),
+                    calculate: document.getElementById('calculateBtn'),
+                    export: document.getElementById('exportBtn'),
+                    saveData: document.getElementById('saveDataBtn'),
+                    revertData: document.getElementById('revertDataBtn'),
+                    addNewItem: document.getElementById('addNewItemBtn'),
+                    clearHistory: document.getElementById('clearHistoryBtn'),
+                }
+            };
+            App.tabs.forEach(function(tab) { tab.onclick = function(e) { 
+                if(!e.target.classList.contains('tab-disabled')) {
+                    e.preventDefault(); 
+                    switchView(e.target.dataset.view); 
+                }
+            }; });
+            App.profilesContainer.onclick = function(e) { 
+                var header = e.target.closest('.accordion-header');
+                if(header) handleAccordionToggle(header); 
+            };
+            App.buttons.addProfile.onclick = function() { addProfile(true); };
+            App.buttons.calculate.onclick = calculateAllCosts;
+            App.buttons.export.onclick = exportToCSV;
+            App.buttons.saveData.onclick = saveData;
+            App.buttons.revertData.onclick = revertToDefaults;
+            App.buttons.addNewItem.onclick = addNewItemToTable;
+            App.buttons.clearHistory.onclick = function() { 
+                showModal('Clear History?', 'Are you sure you want to clear the entire change history?', true)
+                .then(function(confirmed) {
+                    if(confirmed) { localStorage.removeItem('changeHistory'); changeHistory=[]; renderChangeHistory(); }
+                });
+            };
+            
+            loadData();
+            populateGlobalInputs();
+            switchView('calculator');
+            addProfile(true);
+            renderDataManagementTable();
+            renderChangeHistory();
+        }
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
